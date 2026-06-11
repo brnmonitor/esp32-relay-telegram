@@ -41,7 +41,6 @@ BC547B base → 47kΩ resistor → GND
 
 > Recommended base resistor: 1kΩ to 4.7kΩ.
 > Tested value: 1.5kΩ.
-> A lower value such as 470Ω also works, but draws unnecessary GPIO current for this input-level switching use.
 
 ## Telegram Commands
 
