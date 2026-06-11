@@ -28,14 +28,14 @@ Built for home automation with a simple and secure single-chat authorization.
 | Power supply | 5V | Can use USB power bank or USB charger |
 
 ### Wiring
-
+```
 ESP32 5V → Relay module VCC  
 ESP32 GND → Relay module GND  
 ESP32 GPIO26 → 470Ω resistor → BC547B base  
 BC547B emitter → GND  
 BC547B collector → Relay module IN  
 BC547B base → 47kΩ resistor → GND  
-
+```
 > The 47kΩ pull-down on the base ensures the BC547B stays off
 > during ESP32 boot, preventing relay from triggering on startup.
 
