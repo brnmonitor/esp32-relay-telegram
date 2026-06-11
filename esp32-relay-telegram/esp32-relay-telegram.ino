@@ -85,7 +85,7 @@ void processMsgs(int numMsgs) {
       bot.sendMessage(CHAT_ID, "Lights Off", "");
     }
     else if (text == "/status") {
-      String msg = "📊 Status:"
+      String msg = "Status:"
                    "\nWiFi: "   + WiFi.SSID() +
                    "\nRSSI: "   + String(WiFi.RSSI()) + " dBm" +
                    "\nIP: "     + WiFi.localIP().toString() +
