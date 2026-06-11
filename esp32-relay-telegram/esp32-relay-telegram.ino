@@ -140,7 +140,7 @@ void loop() {
 // Relay module: 1ch JQC3F-05VDC-C (active LOW trigger)
 // ESP32 5V        → relay module VCC
 // ESP32 GND       → relay module GND
-// GPIO26          → 470Ω resistor → BC547B base
+// GPIO26          → 1k5Ω resistor → BC547B base
 // BC547B emitter  → GND
 // BC547B collector→ relay module IN
 // BC547B base     → 47kΩ resistor → GND (keeps BC547B off during boot)
