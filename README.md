@@ -20,7 +20,7 @@ Built for home automation with a simple and secure single-chat authorization.
 | ESP32 | DevKit V1 (30-pin) | Other ESP32 boards may work with pin adjustments |
 | Relay module | JQC3F-05VDC-C 1 channel | Active LOW trigger, includes flyback diode |
 | Transistor | BC547B (NPN) | Class B, hFE 200-450 |
-| Resistor | 470Ω | BC547B base current limiting |
+| Resistor | 1k5Ω | BC547B base current limiting |
 | Resistor | 47kΩ | BC547B base pull-down, prevents relay trigger on boot |
 | Protoboard | 400 or 830 points | Any size that fits the circuit |
 | Jumper wires | Male-Male | For protoboard connections |
@@ -31,13 +31,17 @@ Built for home automation with a simple and secure single-chat authorization.
 ```
 ESP32 5V → Relay module VCC  
 ESP32 GND → Relay module GND  
-ESP32 GPIO26 → 470Ω resistor → BC547B base  
+ESP32 GPIO26 → 1k5Ω resistor → BC547B base
 BC547B emitter → GND  
 BC547B collector → Relay module IN  
 BC547B base → 47kΩ resistor → GND  
 ```
 > The 47kΩ pull-down on the base ensures the BC547B stays off
 > during ESP32 boot, preventing relay from triggering on startup.
+
+> Recommended base resistor: 1kΩ to 4.7kΩ.
+> Tested value: 1.5kΩ.
+> A lower value such as 470Ω also works, but draws unnecessary GPIO current for this input-level switching use.
 
 ## Telegram Commands
 
