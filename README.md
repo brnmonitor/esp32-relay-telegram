@@ -1,98 +1,179 @@
 # ESP32 Relay Telegram Bot
 
-Control a relay via Telegram bot commands using an ESP32.
-Built for home automation with a simple and secure single-chat authorization.
+Control a relay module via Telegram bot commands using an ESP32.
+
+This project is intended for simple home automation experiments. It uses a Telegram bot, a single authorized chat ID, WiFi reconnection, relay status reporting, and a transistor interface between the ESP32 GPIO and the relay module input.
 
 ## Features
 
-- Control relay on/off via Telegram commands
-- Single chat authorization (ignores and logs unauthorized access)
-- Status report with WiFi SSID, RSSI and IP
-- Automatic WiFi reconnection
-- Startup notification when ESP32 comes online
+* Control a relay with Telegram commands
+* Single-chat authorization
+* Optional unauthorized access alert sent only to the owner chat
+* Relay status reporting
+* WiFi SSID, RSSI and IP reporting
+* Automatic WiFi reconnection
+* Startup notification when the ESP32 comes online
+* Safer relay input driving using an external BC547B NPN transistor
 
 ## Hardware
 
-### Components List
+### Components
 
-| Component | Details | Notes |
-|-----------|---------|-------|
-| ESP32 | DevKit V1 (30-pin) | Other ESP32 boards may work with pin adjustments |
-| Relay module | JQC3F-05VDC-C 1 channel | Active LOW trigger, includes flyback diode |
-| Transistor | BC547B (NPN) | Class B, hFE 200-450 |
-| Resistor | 1k5Ω | BC547B base current limiting |
-| Resistor | 47kΩ | BC547B base pull-down, prevents relay trigger on boot |
-| Protoboard | 400 or 830 points | Any size that fits the circuit |
-| Jumper wires | Male-Male | For protoboard connections |
-| USB cable | Micro USB | ESP32 power and programming |
-| Power supply | 5V | Can use USB power bank or USB charger |
+| Component    | Details                              | Notes                                            |
+| ------------ | ------------------------------------ | ------------------------------------------------ |
+| ESP32        | DevKit V1, 30-pin                    | Other ESP32 boards may work with pin adjustments |
+| Relay module | JQC3F-05VDC-C 1-channel relay module | Active LOW trigger                               |
+| Transistor   | BC547B NPN                           | Used to pull the relay module input to GND       |
+| Resistor     | 1.5 kΩ                               | GPIO-to-base current limiting                    |
+| Resistor     | 47 kΩ                                | Base pull-down to prevent floating during boot   |
+| Protoboard   | 400 or 830 points                    | Optional, for testing                            |
+| Jumper wires | Male-to-male                         | For protoboard wiring                            |
+| USB cable    | Micro USB                            | ESP32 power and programming                      |
+| Power supply | 5 V                                  | USB charger, USB power bank, or ESP32 USB power  |
 
-### Wiring
+## Wiring
+
+The relay module used in this project is an **active LOW trigger** module. This means the relay turns on when the `IN` pin is pulled to `GND`.
+
+The BC547B transistor is used as a low-side signal switch. The ESP32 does not drive the relay module input directly; it drives the transistor base instead.
+
+```text
+ESP32 5V/VIN  -> Relay module VCC
+ESP32 GND     -> Relay module GND
+
+ESP32 GPIO26  -> 1.5 kΩ resistor -> BC547B base
+BC547B emitter -> GND
+BC547B collector -> Relay module IN
+
+BC547B base -> 47 kΩ resistor -> GND
 ```
-ESP32 5V → Relay module VCC  
-ESP32 GND → Relay module GND  
-ESP32 GPIO26 → 1k5Ω resistor → BC547B base
-BC547B emitter → GND  
-BC547B collector → Relay module IN  
-BC547B base → 47kΩ resistor → GND  
-```
-> The 47kΩ pull-down on the base ensures the BC547B stays off
-> during ESP32 boot, preventing relay from triggering on startup.
 
-> Recommended base resistor: 1kΩ to 4.7kΩ.
-> Tested value: 1.5kΩ.
+### Why use the BC547B?
+
+Many 5 V relay modules use a 5 V input circuit. Although some modules can be triggered directly from a 3.3 V ESP32 GPIO, using a transistor makes the interface more predictable.
+
+With this circuit:
+
+```text
+GPIO26 LOW  -> transistor OFF -> relay module IN stays HIGH -> relay OFF
+GPIO26 HIGH -> transistor ON  -> relay module IN is pulled LOW -> relay ON
+```
+
+### Base resistor
+
+Recommended base resistor range:
+
+```text
+1 kΩ to 4.7 kΩ
+```
+
+Tested value:
+
+```text
+1.5 kΩ
+```
+
+A lower value such as 470 Ω can also work, but it draws more GPIO current than necessary for this input-level switching use.
+
+### Base pull-down resistor
+
+The 47 kΩ resistor between the BC547B base and GND keeps the transistor turned off while the ESP32 is booting or resetting.
+
+During boot, the GPIO may briefly be in high-impedance mode. Without the pull-down resistor, the transistor base could float and partially turn on, causing an unwanted relay trigger.
 
 ## Telegram Commands
 
-| Command    | Description                |
-|------------|----------------------------|
-| `/on`      | Turn relay on              |
-| `/off`     | Turn relay off             |
-| `/status`  | Show WiFi and relay status |
+| Command   | Description                |
+| --------- | -------------------------- |
+| `/on`     | Turn relay on              |
+| `/off`    | Turn relay off             |
+| `/status` | Show WiFi and relay status |
 
 ## Setup
 
-### 1. Prerequisites
+### 1. Install Arduino libraries
 
-Install these libraries in Arduino IDE:
+Install these libraries using the Arduino IDE Library Manager:
 
 | Library              | Install via             |
-|----------------------|-------------------------|
+| -------------------- | ----------------------- |
 | UniversalTelegramBot | Arduino Library Manager |
 | ArduinoJson          | Arduino Library Manager |
 
-### 2. Create a Telegram Bot
+### 2. Create a Telegram bot
 
-1. Open Telegram and talk to [@BotFather](https://t.me/botfather)
-2. Send `/newbot` and follow the instructions
-3. Copy the **bot token** provided
+1. Open Telegram.
+2. Talk to [@BotFather](https://t.me/botfather).
+3. Send `/newbot`.
+4. Follow the instructions.
+5. Copy the bot token.
 
-### 3. Get Your Chat ID
+### 3. Get the chat ID
 
-1. Talk to [@userinfobot](https://t.me/userinfobot)
-2. Copy your **chat ID**
+1. Talk to [@userinfobot](https://t.me/userinfobot).
+2. Copy the chat ID.
+3. Use that value as `CHAT_ID`.
 
-### 4. Configure Credentials
+For groups, the chat ID is usually a negative number.
 
-Copy the example credentials file:  
+### 4. Configure credentials
+
+Copy the example credentials file:
+
 ```bash
 cp credentials.h.example credentials.h
 ```
-Edit credentials.h with your values:  
-```
-#define WIFI_SSID      "your_wifi_network"
-#define WIFI_PASSWORD  "your_wifi_password"
-#define BOT_TOKEN      "your_telegram_bot_token"
-#define CHAT_ID        "your_telegram_chat_id"
-```
-### 5. Flash
-Open esp32-relay-telegram.ino in Arduino IDE  
-Select your ESP32 board and port  
-Click Upload  
 
-### Security
-Only the configured CHAT_ID can control the relay
-Any unauthorized access attempt is logged and forwarded to the owner
-credentials.h is excluded from version control via .gitignore
-TLS is used for Telegram API communication (setInsecure skips
-certificate validation — acceptable for local hobby use)
+Edit `credentials.h` with your own values:
+
+```cpp
+#pragma once
+
+#define WIFI_SSID     "your_wifi_name_here"
+#define WIFI_PASSWORD "your_wifi_password_here"
+#define BOT_TOKEN     "your_telegram_bot_token_here"
+#define CHAT_ID       "your_telegram_chat_id_here"
+```
+
+The real `credentials.h` file should not be committed to Git.
+
+### 5. Flash the ESP32
+
+1. Open `esp32-relay-telegram.ino` in Arduino IDE.
+2. Select the correct ESP32 board.
+3. Select the correct serial port.
+4. Upload the sketch.
+
+After boot, the ESP32 sends a Telegram message to the authorized chat:
+
+```text
+ESP32 online and ready.
+```
+
+## Security Notes
+
+Only the configured `CHAT_ID` can control the relay.
+
+Messages from unauthorized chats do not receive any reply. The current code may optionally forward an alert to the authorized owner chat so that unexpected access attempts can be observed during testing.
+
+Keep `credentials.h` out of version control. The `.gitignore` file should exclude it.
+
+If a bot token is ever exposed, revoke it and generate a new one using BotFather.
+
+Telegram communication uses HTTPS. The sketch uses `client.setInsecure()`, which skips certificate validation. This is simpler for hobby projects, but certificate validation should be used for a more security-sensitive setup.
+
+## Repository Structure
+
+```text
+esp32-relay-telegram/
+├── esp32-relay-telegram/
+│   ├── esp32-relay-telegram.ino
+│   └── credentials.h.example
+├── .gitignore
+├── LICENSE
+└── README.md
+```
+
+## License
+
+This project is licensed under the MIT License.
