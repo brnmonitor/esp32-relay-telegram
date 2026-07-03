@@ -22,7 +22,7 @@ This project is intended for simple home automation experiments. It uses a Teleg
 | Component    | Details                              | Notes                                            |
 | ------------ | ------------------------------------ | ------------------------------------------------ |
 | ESP32        | DevKit V1, 30-pin                    | Other ESP32 boards may work with pin adjustments |
-| Relay module | JQC3F-05VDC-C 1-channel relay module | Active LOW trigger                               |
+| Relay module | JQC3F-05VDC-C 4-channel relay module | Active LOW trigger                               |
 | Transistor   | BC547B NPN                           | Used to pull the relay module input to GND       |
 | Resistor     | 2 kΩ                               | GPIO-to-base current limiting                    |
 | Resistor     | 47 kΩ                                | Base pull-down to prevent floating during boot   |
