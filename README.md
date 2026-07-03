@@ -24,7 +24,7 @@ This project is intended for simple home automation experiments. It uses a Teleg
 | ESP32        | DevKit V1, 30-pin                    | Other ESP32 boards may work with pin adjustments |
 | Relay module | JQC3F-05VDC-C 1-channel relay module | Active LOW trigger                               |
 | Transistor   | BC547B NPN                           | Used to pull the relay module input to GND       |
-| Resistor     | 1.5 kΩ                               | GPIO-to-base current limiting                    |
+| Resistor     | 2 kΩ                               | GPIO-to-base current limiting                    |
 | Resistor     | 47 kΩ                                | Base pull-down to prevent floating during boot   |
 | Protoboard   | 400 or 830 points                    | Optional, for testing                            |
 | Jumper wires | Male-to-male                         | For protoboard wiring                            |
@@ -38,14 +38,25 @@ The relay module used in this project is an **active LOW trigger** module. This 
 The BC547B transistor is used as a low-side signal switch. The ESP32 does not drive the relay module input directly; it drives the transistor base instead.
 
 ```text
-ESP32 5V/VIN  -> Relay module VCC
-ESP32 GND     -> Relay module GND
+GPIO25          → 2KΩ resistor → BC547B_1 base
+GPIO26          → 2KΩ resistor → BC547B_2 base
+GPIO32          → 2KΩ resistor → BC547B_3 base
+GPIO33          → 2KΩ resistor → BC547B_4 base
 
-ESP32 GPIO26  -> 1.5 kΩ resistor -> BC547B base
-BC547B emitter -> GND
-BC547B collector -> Relay module IN
+BC547B_1 emitter  → GND
+BC547B_2 emitter  → GND
+BC547B_3 emitter  → GND
+BC547B_4 emitter  → GND
 
-BC547B base -> 47 kΩ resistor -> GND
+BC547B_1 collector → relay_1 module IN
+BC547B_2 collector → relay_2 module IN
+BC547B_3 collector → relay_3 module IN
+BC547B_4 collector → relay_4 module IN
+
+BC547B_1 base     → 47kΩ resistor → GND (keeps BC547B off during boot)
+BC547B_2 base     → 47kΩ resistor → GND (keeps BC547B off during boot)
+BC547B_3 base     → 47kΩ resistor → GND (keeps BC547B off during boot)
+BC547B_4 base     → 47kΩ resistor → GND (keeps BC547B off during boot)
 ```
 
 ### Why use the BC547B?
@@ -70,7 +81,7 @@ Recommended base resistor range:
 Tested value:
 
 ```text
-1.5 kΩ
+2 kΩ
 ```
 
 A lower value such as 470 Ω can also work, but it draws more GPIO current than necessary for this input-level switching use.
@@ -82,12 +93,19 @@ The 47 kΩ resistor between the BC547B base and GND keeps the transistor turned 
 During boot, the GPIO may briefly be in high-impedance mode. Without the pull-down resistor, the transistor base could float and partially turn on, causing an unwanted relay trigger.
 
 ## Telegram Commands
-
 | Command   | Description                |
 | --------- | -------------------------- |
-| `/on`     | Turn relay on              |
-| `/off`    | Turn relay off             |
-| `/status` | Show WiFi and relay status |
+|`all_lights_on` | Turn on all lights - relay 1 to 3|
+|`all_lights_off` | Turn off all lights - relay 1 to 3|
+|`sala1_on` | Turn relay 1 on|
+|`sala1_off` | Turn relay 1 off|
+|`sala2_on` | Turn relay 2 on|
+|`sala2_off` | Turn relay 2 off|
+|`garagem_on` | Turn relay 3 on|
+|`garagem_off` | Turn relay 3 off|
+|`free_on` | Turn relay 4 on|
+|`free_off` | Turn relay 4 off|
+|`status2` | Show WiFi and relay status|
 
 ## Setup
 
