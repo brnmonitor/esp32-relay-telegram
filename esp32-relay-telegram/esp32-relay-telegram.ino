@@ -5,7 +5,21 @@
 #include <credentials.h>
 
 // ===== CONFIG =====
-#define RELAY_PIN 26
+
+constexpr int MODULE_RELAY_COUNT = 4;
+
+struct Relay {
+	int pin;
+	bool state;
+};
+
+// Index set to match GPIO physical order
+Relay relays[MODULE_RELAY_COUNT] = {
+	{26, false},
+	{25, false},
+	{33, false},
+	{32, false}
+};
 // ==================
 
 WiFiClientSecure client;
@@ -17,16 +31,16 @@ const unsigned long interval = 2000;
 unsigned long lastWifiTry = 0;
 const unsigned long wifiRetryInterval = 10000;
 
-bool relayState = false;
+
 
 void processMsgs(int numMsgs);  // ← forward declaration
 
-void setRelay(bool state) {
-  relayState = state;
+void setRelay(int relay_index, bool state) {
+  relays[relay_index].state = state;
   // BC547 collector pulls relay module IN to GND (active LOW module):
   // GPIO HIGH → transistor ON → relay ON
   // GPIO LOW  → transistor OFF → relay OFF
-  digitalWrite(RELAY_PIN, state ? HIGH : LOW);
+  digitalWrite(relays[relay_index].pin, relays[relay_index].state ? HIGH : LOW);
 }
 
 void connectWiFi() {
@@ -58,6 +72,8 @@ void processMsgs(int numMsgs) {
     text.toLowerCase();
     text.trim();
 
+    Serial.println(text);
+
     // Strip @bot_name suffix from group commands (e.g. /on@mybot → /on)
     int atIndex = text.indexOf('@');
     if (atIndex > 0) {
@@ -75,33 +91,74 @@ void processMsgs(int numMsgs) {
       bot.sendMessage(CHAT_ID, alert, "");
       continue;
     }
+    if (text == "/all_lights_on"){
+        setRelay(0, true);
+        setRelay(1, true);
+        setRelay(2, true);
+        bot.sendMessage(CHAT_ID, "All Lights On", "");
+    }
+    if (text == "/all_lights_off"){
+        setRelay(0, false);
+        setRelay(1, false);
+        setRelay(2, false);
+        bot.sendMessage(CHAT_ID, "All Lights Off", "");
+    }
+    if (text == "/sala1_on") {
+        setRelay(0, true);
+        bot.sendMessage(CHAT_ID, "Lights sala1 On", "");
+    } 
+    else if (text == "/sala1_off") {
+        setRelay(0, false);
+        bot.sendMessage(CHAT_ID, "Lights sala1 Off", "");
+    } 
+    else if (text == "/sala2_on") {
+        setRelay(1, true);
+        bot.sendMessage(CHAT_ID, "Lights sala2 On", "");
+    } 
+    else if (text == "/sala2_off") {
+        setRelay(1, false);
+        bot.sendMessage(CHAT_ID, "Lights sala2 Off", "");
+    } 
+    else if (text == "/garagem_on") {
+        setRelay(2, true);
+        bot.sendMessage(CHAT_ID, "Lights garagem On", "");
+    } 
+    else if (text == "/garagem_off") {
+        setRelay(2, false);
+        bot.sendMessage(CHAT_ID, "Lights garagem Off", "");
+    } 
+    else if (text == "/free_on") {
+        setRelay(3, true);
+        bot.sendMessage(CHAT_ID, "free On", "");
+    } 
+    else if (text == "/free_off") {
+        setRelay(3, false);
+        bot.sendMessage(CHAT_ID, "free Off", "");
+    } 
+    else if (text == "/status2") {
+        String msg = "Status:";
+        msg += "\nWiFi: " + WiFi.SSID();
+        msg += "\nRSSI: " + String(WiFi.RSSI()) + " dBm";
+        msg += "\nIP: " + WiFi.localIP().toString();
+        msg += "\nRelays:";
 
-    if (text == "/on") {
-      setRelay(true);
-      bot.sendMessage(CHAT_ID, "Lights On", "");
-    }
-    else if (text == "/off") {
-      setRelay(false);
-      bot.sendMessage(CHAT_ID, "Lights Off", "");
-    }
-    else if (text == "/status") {
-      String msg = "Status:"
-                   "\nWiFi: "   + WiFi.SSID() +
-                   "\nRSSI: "   + String(WiFi.RSSI()) + " dBm" +
-                   "\nIP: "     + WiFi.localIP().toString() +
-                   "\nRelay: "  + (relayState ? "On" : "Off");
-      bot.sendMessage(CHAT_ID, msg, "");
-    }
-    else {
-      bot.sendMessage(CHAT_ID, "Commands:\n/on\n/off\n/status", "");
+        for (int relayIndex = 0; relayIndex < MODULE_RELAY_COUNT; relayIndex++) {
+            msg += "\nR" + String(relayIndex + 1) + ": ";
+            msg += relays[relayIndex].state ? "On" : "Off";
+        }
+
+        bot.sendMessage(CHAT_ID, msg, "");
     }
   }
 }
 
 void setup() {
   Serial.begin(115200);
-  pinMode(RELAY_PIN, OUTPUT);
-  setRelay(false);
+  for (int i = 0; i < MODULE_RELAY_COUNT; i++) {
+	  pinMode(relays[i].pin, OUTPUT);
+	  setRelay(i, false);
+  }
+
   client.setInsecure();
   connectWiFi();
   if (WiFi.status() == WL_CONNECTED) {
@@ -137,10 +194,26 @@ void loop() {
 }
 
 // =====  Hardware wiring =====
-// Relay module: 1ch JQC3F-05VDC-C (active LOW trigger)
+// Relay module: 4ch JQC3F-05VDC-C (active LOW trigger)
 // ESP32 5V        → relay module VCC
 // ESP32 GND       → relay module GND
-// GPIO26          → 1k5Ω resistor → BC547B base
-// BC547B emitter  → GND
-// BC547B collector→ relay module IN
-// BC547B base     → 47kΩ resistor → GND (keeps BC547B off during boot)
+
+// GPIO25          → 2KΩ resistor → BC547B_1 base
+// GPIO26          → 2KΩ resistor → BC547B_2 base
+// GPIO32          → 2KΩ resistor → BC547B_3 base
+// GPIO33          → 2KΩ resistor → BC547B_4 base
+
+// BC547B_1 emitter  → GND
+// BC547B_2 emitter  → GND
+// BC547B_3 emitter  → GND
+// BC547B_4 emitter  → GND
+
+// BC547B_1 collector → relay_1 module IN
+// BC547B_2 collector → relay_2 module IN
+// BC547B_3 collector → relay_3 module IN
+// BC547B_4 collector → relay_4 module IN
+
+// BC547B_1 base     → 47kΩ resistor → GND (keeps BC547B off during boot)
+// BC547B_2 base     → 47kΩ resistor → GND (keeps BC547B off during boot)
+// BC547B_3 base     → 47kΩ resistor → GND (keeps BC547B off during boot)
+// BC547B_4 base     → 47kΩ resistor → GND (keeps BC547B off during boot)
